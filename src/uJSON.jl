@@ -1,21 +1,18 @@
 module uJSON
 	export parse
 
-	const ujsonlib = find_library(["ujsonlib"],[Pkg.dir("uJSON", "deps"),])
+	const ujsonlib = find_library(["ujsonlib"],[Pkg.dir("uJSON", "deps")])
 
-	type DorA
-	    key::Union(String, Nothing)
-	end
 	type UltraObject
 	    # array to put JSON data in
 	    array::Array{Any, 1}
 	    # array to hold keys in
-	    route::Array{DorA, 1}
+	    route::Array{Any, 1}
 	    # whether we are in a dict (as opposed to an array)
 	    in_dict::Bool
 	    # working object used as a reference to where we're putting data now
 	    working_obj::Any
-	    UltraObject() = new(Any[], DorA[], false, nothing)
+	    UltraObject() = new(Any[], Any[], false, nothing)
 	end
 
 	function set_last!{T}(uo::UltraObject, value::T, key::Union(String, Nothing))
@@ -25,22 +22,6 @@ module uJSON
 	        uo.working_obj[key] = value
 	    end
 	end
-
-	function set_working_obj(uo::UltraObject)
-	    obj = uo.array
-	    for dora in uo.route
-	        if length(obj) == 0
-	            break
-	        end
-	        if dora.key == nothing
-	            obj = last(obj)
-	        else
-	            obj = obj[dora.key]
-	        end
-	    end
-	    uo.working_obj = obj
-	end
-
 
 	function get_string(key_::Ptr{Int32}, key_length_::Ptr{Int32})
 	    key_length = int64(unsafe_load(key_length_))
@@ -57,12 +38,12 @@ module uJSON
 	    new_item = is_dict ? Dict{String, Any}() : Any[]
 	    
 	    if uo.working_obj == nothing
-	        set_working_obj(uo)
+	        uo.working_obj = uo.array
 	    end
 	    set_last!(uo, new_item, key)
-	    push!(uo.route, DorA(key))
+	    push!(uo.route, new_item)
 	    uo.in_dict = is_dict
-	    set_working_obj(uo)
+	    uo.working_obj = last(uo.route)
 	    return nothing
 	end
 	const startnew_c = cfunction(startnew, Void, (Ptr{Void}, 
@@ -72,9 +53,10 @@ module uJSON
 	        
 	function exit_ob(uobj_::Ptr{Void})
 	    uo = unsafe_pointer_to_objref(uobj_)::UltraObject
-	    uo.in_dict = last(uo.route).key != nothing
+	    # uo.in_dict = last(uo.route).key != nothing
 	    pop!(uo.route)
-	    set_working_obj(uo)
+	    uo.working_obj = length(uo.route) > 0 ? last(uo.route) : nothing
+	    uo.in_dict = isa(uo.working_obj, Dict)
 	    return nothing
 	end
 	const exit_ob_c = cfunction(exit_ob, Void, (Ptr{Void},))
@@ -153,14 +135,35 @@ module uJSON
 	                                Ptr{Int32},
 	                                Ptr{Int32}))
 
-	function parse(filename)
-	    uo = UltraObject()
-	    println("ujsonlib: ", ujsonlib)
+# not used as reading the string in is
+	# function parsefile(filename::String)
+	#     uo = UltraObject()
 
-	    result = ccall( (:process_file, ujsonlib), 
+	#     result = ccall( (:process_file, ujsonlib), 
+	#                     Int32, 
+	#                     (Ptr{Uint8}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Any), 
+	#                     pointer(filename), startnew_c, exit_ob_c, add_null_bool_int_c, add_double_c, add_string_c, uo)
+	#     # the first (and only) item in the base array is the actual data structure
+	#     if result != 1
+	#         error("error processing JSON")
+	#     end
+	#     if length(uo.array) == 0
+	#         error("no JSON found")
+	#     end
+	#     return uo.array[1]
+	# end
+
+	function parse(io::IO)
+		str = readall(io)
+		return parse(str)
+	end
+
+	function parse(str::String)
+	    uo = UltraObject()
+	    result = ccall( (:process_string, ujsonlib), 
 	                    Int32, 
 	                    (Ptr{Uint8}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Any), 
-	                    filename, startnew_c, exit_ob_c, add_null_bool_int_c, add_double_c, add_string_c, uo)
+	                    utf8(str), startnew_c, exit_ob_c, add_null_bool_int_c, add_double_c, add_string_c, uo)
 	    # the first (and only) item in the base array is the actual data structure
 	    if result != 1
 	        error("error processing JSON")

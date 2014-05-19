@@ -1,16 +1,23 @@
 using uJSON
+using JSON
 using Base.Test
 
-# write your own tests here
-@test 1 == 1
+function print_sum(a)
+    print(summary(a), ": ")
+    show(a)
+    println()
+end
 
-@time result = uJSON.parse("./sample.json")
-println("result:\n", result, "\n")
+print("uJSON running trivial example:")
+input_str = "[1,2,\"hello\", null, 3.2123]"
+uresult = uJSON.parse(input_str)
+print(input_str, " >> ")
+print_sum(uresult)
 
-# println("printing test_data.json")
-# @time result = parse_json("./json_profile/test_data.json")
-# @profile result = parse_json("./json_profile/test_data.json")
-# Profile.print()
-# using ProfileView
-# ProfileView.view()
-# readline(STDIN)
+fn = Pkg.dir("uJSON", "test", "sample.json")
+print("\nJSON running simple test:  ")
+@time result = JSON.parse(open(fn, "r"))
+print("uJSON running simple test: ")
+@time uresult = uJSON.parse(open(fn, "r"))
+@test uresult == result
+println("results equal")

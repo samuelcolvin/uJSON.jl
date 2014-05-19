@@ -1,0 +1,26 @@
+{
+  "Test String": null,
+  "int5": 5,
+  "big int": 4294967301,
+  "float": 4.323422,
+  "string thing": "example",
+  "bool var true": true,
+  "bool var false": false,
+  "int array": [1,2,3,4,5],
+  "int dict":
+  {
+      "a": 1,
+      "b": 2
+  },
+  "array of dicts":
+  [
+      {"a":1, "b":2},
+      {"c":3, "d":4}
+  ],
+  "sites":
+  {
+  	"google": "http://www.google.com",
+  	"twitter": "http://www.twitter.com"
+  },
+  "random array": [1, "hello", true, false, null, 4.33213]
+}

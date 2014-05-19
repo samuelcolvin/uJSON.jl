@@ -105,9 +105,7 @@ void process_object(int level,
                 iter = UJBeginObject(obj);
                 while(UJIterObject(&iter, &key, &objiter))
                 {
-//                    printf("key: '%ls'\n", key.ptr);
                     int key_len = (int)key.cchLen;
-//                    print_keys(key.ptr, &key_len);
                     process_object(level + 1,
                     			   state,
                     			   objiter,
@@ -126,20 +124,15 @@ void process_object(int level,
     }
 }
 
-int process_file(char *filename,
-				 void(*startnew)(void *uobj, wchar_t *key, int *key_length, int *is_dict),
-				 void(*exit)(void *uobj),
-				 void(*add_null_bool_int_c)(void *uobj, wchar_t *key, int *key_length, long long *value, int *value_type),
-				 void(*add_double)(void *uobj, wchar_t *key, int *key_length, double *value),
-				 void(*add_string)(void *uobj, wchar_t *key, int *key_length, const wchar_t *value, int *value_length),
-                 void *uobj)
+int process_string(const char *json_str,
+                   void(*startnew)(void *uobj, wchar_t *key, int *key_length, int *is_dict),
+                   void(*exit)(void *uobj),
+                   void(*add_null_bool_int_c)(void *uobj, wchar_t *key, int *key_length, long long *value, int *value_type),
+                   void(*add_double)(void *uobj, wchar_t *key, int *key_length, double *value),
+                   void(*add_string)(void *uobj, wchar_t *key, int *key_length, const wchar_t *value, int *value_length),
+                   void *uobj)
 {
-    const char *input;
-    size_t cbInput;
-    void *state;
-    FILE *file;
     char buffer[32768];
-
     UJHeapFuncs hf;
     hf.cbInitialHeap = sizeof(buffer);
     hf.initalHeap = buffer;
@@ -147,32 +140,75 @@ int process_file(char *filename,
     hf.malloc = malloc;
     hf.realloc = realloc;
 
-    file = fopen(filename, "rb");
-    if(file==NULL) {
-        printf("file not found!\n");
-        return 0;
-    }
-    input = (char *) malloc(1024 * 1024 * 1024);
-    cbInput = fread ( (void *) input, 1, 1024 * 1024 * 1024, file);
-    fclose(file);
-    
-    UJObject obj;
-
-    obj = UJDecode(input, cbInput, &hf, &state);
+    void *state;
+    size_t json_str_size = strlen(json_str);
+    UJObject obj = UJDecode(json_str, json_str_size, &hf, &state);
     wchar_t *empty_key = L"";
     int empty_key_len = 0;
     process_object(0,
-    			   state,
-    			   obj,
-    			   empty_key,
-    			   empty_key_len,
-    			   startnew,
-    			   exit,
-    			   add_null_bool_int_c,
-    			   add_double,
-    			   add_string,
-    			   uobj);
+                   state,
+                   obj,
+                   empty_key,
+                   empty_key_len,
+                   startnew,
+                   exit,
+                   add_null_bool_int_c,
+                   add_double,
+                   add_string,
+                   uobj);
     UJFree(state);
     return 1;
 }
-        
+
+// not currently used as reading the file in Julia is quicker
+// (perhaps partly because of the massive buffer here??) and cleaner / less error prone
+
+// int process_file(char *filename,
+// 				 void(*startnew)(void *uobj, wchar_t *key, int *key_length, int *is_dict),
+// 				 void(*exit)(void *uobj),
+// 				 void(*add_null_bool_int_c)(void *uobj, wchar_t *key, int *key_length, long long *value, int *value_type),
+// 				 void(*add_double)(void *uobj, wchar_t *key, int *key_length, double *value),
+// 				 void(*add_string)(void *uobj, wchar_t *key, int *key_length, const wchar_t *value, int *value_length),
+//                  void *uobj)
+// {
+//     const char *input;
+//     size_t cbInput;
+//     void *state;
+//     FILE *file;
+//     char buffer[32768];
+
+//     UJHeapFuncs hf;
+//     hf.cbInitialHeap = sizeof(buffer);
+//     hf.initalHeap = buffer;
+//     hf.free = free;
+//     hf.malloc = malloc;
+//     hf.realloc = realloc;
+
+//     file = fopen(filename, "rb");
+//     if(file==NULL) {
+//         printf("file not found!\n");
+//         return 0;
+//     }
+//     input = (char *) malloc(1024 * 1024 * 1024);
+//     cbInput = fread ( (void *) input, 1, 1024 * 1024 * 1024, file);
+//     fclose(file);
+    
+//     UJObject obj;
+
+//     obj = UJDecode(input, cbInput, &hf, &state);
+//     wchar_t *empty_key = L"";
+//     int empty_key_len = 0;
+//     process_object(0,
+//     			   state,
+//     			   obj,
+//     			   empty_key,
+//     			   empty_key_len,
+//     			   startnew,
+//     			   exit,
+//     			   add_null_bool_int_c,
+//     			   add_double,
+//     			   add_string,
+//     			   uobj);
+//     UJFree(state);
+//     return 1;
+// }

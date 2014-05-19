@@ -1,2 +1,2 @@
-cd(joinpath(Pkg.dir("uJSON"), "deps"))
+cd(Pkg.dir("uJSON", "deps"))
 run(`make`)
