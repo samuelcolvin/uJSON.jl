@@ -27,13 +27,23 @@ module uJSON
 	    key_length = int64(unsafe_load(key_length_))
 	    UTF32String(pointer_to_array(key_, key_length, false))
 	end
+
+	function get_key(uobj_::Ptr{Void}, key_::Ptr{Int32}, key_length_::Ptr{Int32})
+	    uo = unsafe_pointer_to_objref(uobj_)::UltraObject
+	    key = ""
+	    if uo.in_dict
+		    key_length = int64(unsafe_load(key_length_))
+		    key = UTF32String(pointer_to_array(key_, key_length, false))
+		end
+		return uo, key
+	end
 	        
 	function startnew(uobj_::Ptr{Void}, 
 	                  key_::Ptr{Int32},
 	                  key_length_::Ptr{Int32},
 	                  is_dict_::Ptr{Int32})
-	    uo = unsafe_pointer_to_objref(uobj_)::UltraObject
-	    key = uo.in_dict ? get_string(key_, key_length_) : ""
+	    uo, key = get_key(uobj_, key_, key_length_)
+
 	    is_dict = bool(unsafe_load(is_dict_))
 	    new_item = is_dict ? Dict{String, Any}() : Any[]
 	    
@@ -65,8 +75,7 @@ module uJSON
 	                           key_length_::Ptr{Int32},
 	                           value_::Ptr{Int64},
 	                           value_type_::Ptr{Int32})
-	    uo = unsafe_pointer_to_objref(uobj_)::UltraObject
-	    key = uo.in_dict ? get_string(key_, key_length_) : ""
+	    uo, key = get_key(uobj_, key_, key_length_)
 	    
 	    value_type = unsafe_load(value_type_)
 	    if value_type == -1
@@ -93,8 +102,8 @@ module uJSON
 	                   key_::Ptr{Int32},
 	                   key_length_::Ptr{Int32},
 	                   value_::Ptr{Float64})
-	    uo = unsafe_pointer_to_objref(uobj_)::UltraObject
-	    key = uo.in_dict ? get_string(key_, key_length_) : ""
+	    uo, key = get_key(uobj_, key_, key_length_)
+
 	    value = unsafe_load(value_)::Float64
 	    set_last!(uo, value, key)
 	    return nothing
@@ -106,8 +115,7 @@ module uJSON
 	                    key_length_::Ptr{Int32},
 	                    value_::Ptr{Int32},
 	                    value_length_::Ptr{Int32})
-	    uo = unsafe_pointer_to_objref(uobj_)::UltraObject
-	    key = uo.in_dict ? get_string(key_, key_length_) : ""
+	    uo, key = get_key(uobj_, key_, key_length_)
 	    
 	    value = get_string(value_, value_length_)
 	    set_last!(uo, value, key)

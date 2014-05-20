@@ -20,4 +20,4 @@ print("\nJSON running simple test:  ")
 print("uJSON running simple test: ")
 @time uresult = uJSON.parse(open(fn, "r"))
 @test uresult == result
-println("results equal")
+println("SUCCESS: results equal")
