@@ -26,7 +26,7 @@ end
 
 function generate_jagged(l1, l2)
 	data = Any[]
-	arrays_only = false
+	arrays_only = true
 	randrand(maxlen) = rand(int(rand()*maxlen))
 	for r in rand(int(l1))
 	    if r < 0.25
@@ -49,7 +49,7 @@ function generate_jagged(l1, l2)
 	end
 	data
 end
-data = generate_jagged(1e4, 500)
+data = generate_jagged(1e5, 500)
 json_str = json(data)
 fn = "testing.json"
 f=open(fn, "w")
