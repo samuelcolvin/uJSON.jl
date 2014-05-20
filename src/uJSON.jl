@@ -11,15 +11,15 @@ module uJSON
 	    # whether we are in a dict (as opposed to an array)
 	    in_dict::Bool
 	    # working object used as a reference to where we're putting data now
-	    working_obj::Any
+	    working_obj::Any #Union(Array, Dict, Nothing) (Union seems to be very slightly slower)
 	    UltraObject() = new(Any[], Any[], false, nothing)
 	end
 
-	function set_last!{T}(uo::UltraObject, value::T, key::Union(String, Nothing))
-	    if key == nothing
-	        push!(uo.working_obj, value)
-	    else
+	function set_last!{T}(uo::UltraObject, value::T, key::String)
+	    if uo.in_dict
 	        uo.working_obj[key] = value
+	    else
+	        push!(uo.working_obj, value)
 	    end
 	end
 
@@ -33,7 +33,7 @@ module uJSON
 	                  key_length_::Ptr{Int32},
 	                  is_dict_::Ptr{Int32})
 	    uo = unsafe_pointer_to_objref(uobj_)::UltraObject
-	    key = uo.in_dict ? get_string(key_, key_length_) : nothing
+	    key = uo.in_dict ? get_string(key_, key_length_) : ""
 	    is_dict = bool(unsafe_load(is_dict_))
 	    new_item = is_dict ? Dict{String, Any}() : Any[]
 	    
@@ -53,21 +53,12 @@ module uJSON
 	        
 	function exit_ob(uobj_::Ptr{Void})
 	    uo = unsafe_pointer_to_objref(uobj_)::UltraObject
-	    # uo.in_dict = last(uo.route).key != nothing
 	    pop!(uo.route)
 	    uo.working_obj = length(uo.route) > 0 ? last(uo.route) : nothing
 	    uo.in_dict = isa(uo.working_obj, Dict)
 	    return nothing
 	end
 	const exit_ob_c = cfunction(exit_ob, Void, (Ptr{Void},))
-
-	function print_val(key, value)
-	    if key == nothing
-	        println(" Adding: ",value, ", type: ", typeof(value))
-	    else
-	        println(" Adding '", key, "': ", value, ", type: ", typeof(value))
-	    end
-	end
 	                            
 	function add_null_bool_int(uobj_::Ptr{Void}, 
 	                           key_::Ptr{Int32},
@@ -75,7 +66,7 @@ module uJSON
 	                           value_::Ptr{Int64},
 	                           value_type_::Ptr{Int32})
 	    uo = unsafe_pointer_to_objref(uobj_)::UltraObject
-	    key = uo.in_dict ? get_string(key_, key_length_) : nothing
+	    key = uo.in_dict ? get_string(key_, key_length_) : ""
 	    
 	    value_type = unsafe_load(value_type_)
 	    if value_type == -1
@@ -87,7 +78,6 @@ module uJSON
 	    else
 	        error("value type unknown: ", value_type)
 	    end
-	#     print_val(key, value)
 	    set_last!(uo, value, key)
 	    return nothing
 	end
@@ -104,26 +94,22 @@ module uJSON
 	                   key_length_::Ptr{Int32},
 	                   value_::Ptr{Float64})
 	    uo = unsafe_pointer_to_objref(uobj_)::UltraObject
-	    key = uo.in_dict ? get_string(key_, key_length_) : nothing
+	    key = uo.in_dict ? get_string(key_, key_length_) : ""
 	    value = unsafe_load(value_)::Float64
-	#     print_val(key, value)
 	    set_last!(uo, value, key)
 	    return nothing
 	end
 	const add_double_c = cfunction(add_double, Void, (Ptr{Void}, Ptr{Int32}, Ptr{Int32}, Ptr{Float64}))
 
-
-	                            
 	function add_string(uobj_::Ptr{Void}, 
 	                    key_::Ptr{Int32},
 	                    key_length_::Ptr{Int32},
 	                    value_::Ptr{Int32},
 	                    value_length_::Ptr{Int32})
 	    uo = unsafe_pointer_to_objref(uobj_)::UltraObject
-	    key = uo.in_dict ? get_string(key_, key_length_) : nothing
+	    key = uo.in_dict ? get_string(key_, key_length_) : ""
 	    
 	    value = get_string(value_, value_length_)
-	#     print_val(key, value)
 	    set_last!(uo, value, key)
 	    return nothing
 	end
