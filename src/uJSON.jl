@@ -11,7 +11,7 @@ module uJSON
 	    # whether we are in a dict (as opposed to an array)
 	    in_dict::Bool
 	    # working object used as a reference to where we're putting data now
-	    working_obj::Any #Union(Array, Dict, Nothing) (Union seems to be very slightly slower)
+	    working_obj::Any
 	    UltraObject() = new(Any[], Any[], false, nothing)
 	end
 
@@ -24,17 +24,13 @@ module uJSON
 	end
 
 	function get_string(key_::Ptr{Int32}, key_length_::Ptr{Int32})
-	    key_length = int64(unsafe_load(key_length_))
-	    UTF32String(pointer_to_array(key_, key_length, false))
+	    UTF32String(pointer_to_array(key_, unsafe_load(key_length_), false))
 	end
 
 	function get_key(uobj_::Ptr{Void}, key_::Ptr{Int32}, key_length_::Ptr{Int32})
 	    uo = unsafe_pointer_to_objref(uobj_)::UltraObject
-	    key = ""
-	    if uo.in_dict
-		    key_length = int64(unsafe_load(key_length_))
-		    key = UTF32String(pointer_to_array(key_, key_length, false))
-		end
+	    # seems to be slightly quicker if we don't call get_string
+		key = uo.in_dict ?  UTF32String(pointer_to_array(key_, unsafe_load(key_length_), false)): ""
 		return uo, key
 	end
 	        
@@ -53,7 +49,7 @@ module uJSON
 	    set_last!(uo, new_item, key)
 	    push!(uo.route, new_item)
 	    uo.in_dict = is_dict
-	    uo.working_obj = last(uo.route)
+	    uo.working_obj = new_item
 	    return nothing
 	end
 	const startnew_c = cfunction(startnew, Void, (Ptr{Void}, 
