@@ -61,16 +61,17 @@ module uJSON
 	                                              Ptr{Int32},
 	                                              Ptr{Int32}))
 	        
-	function exit_ob(uobj_::Ptr{Void})
+	function exitob(uobj_::Ptr{Void})
 	    uo = unsafe_pointer_to_objref(uobj_)::UltraObject
 	    pop!(uo.route)
 	    uo.working_obj = length(uo.route) > 0 ? last(uo.route) : nothing
 	    uo.in_dict = isa(uo.working_obj, Dict)
 	    return nothing
 	end
-	const exit_ob_c = cfunction(exit_ob, Void, (Ptr{Void},))
-	                            
-	function add_null_bool_int(uobj_::Ptr{Void}, 
+	const exitob_c = cfunction(exitob, Void, (Ptr{Void},))
+	
+	# null, bool, int             
+	function addnbi(uobj_::Ptr{Void}, 
 	                           key_::Ptr{Int32},
 	                           key_length_::Ptr{Int32},
 	                           value_::Ptr{Int64},
@@ -90,15 +91,15 @@ module uJSON
 	    set_last!(uo, value, key)
 	    return nothing
 	end
-	const add_null_bool_int_c = cfunction(add_null_bool_int, 
-	                                      Void, 
-	                                      (Ptr{Void}, 
-	                                       Ptr{Int32},
-	                                       Ptr{Int32},
-	                                       Ptr{Int64},
-	                                       Ptr{Int32}))
+	const addnbi_c = cfunction(addnbi, 
+	                           Void, 
+	                           (Ptr{Void}, 
+	                            Ptr{Int32},
+	                            Ptr{Int32},
+	                            Ptr{Int64},
+	                            Ptr{Int32}))
 
-	function add_double(uobj_::Ptr{Void}, 
+	function adddouble(uobj_::Ptr{Void}, 
 	                   key_::Ptr{Int32},
 	                   key_length_::Ptr{Int32},
 	                   value_::Ptr{Float64})
@@ -108,26 +109,26 @@ module uJSON
 	    set_last!(uo, value, key)
 	    return nothing
 	end
-	const add_double_c = cfunction(add_double, Void, (Ptr{Void}, Ptr{Int32}, Ptr{Int32}, Ptr{Float64}))
+	const adddouble_c = cfunction(adddouble, Void, (Ptr{Void}, Ptr{Int32}, Ptr{Int32}, Ptr{Float64}))
 
-	function add_string(uobj_::Ptr{Void}, 
-	                    key_::Ptr{Int32},
-	                    key_length_::Ptr{Int32},
-	                    value_::Ptr{Int32},
-	                    value_length_::Ptr{Int32})
+	function addstring(uobj_::Ptr{Void}, 
+	                   key_::Ptr{Int32},
+	                   key_length_::Ptr{Int32},
+	                   value_::Ptr{Int32},
+	                   value_length_::Ptr{Int32})
 	    uo, key = get_key(uobj_, key_, key_length_)
 	    
 	    value = get_string(value_, value_length_)
 	    set_last!(uo, value, key)
 	    return nothing
 	end
-	const add_string_c = cfunction(add_string, 
-	                               Void, 
-	                               (Ptr{Void}, 
-	                                Ptr{Int32},
-	                                Ptr{Int32},
-	                                Ptr{Int32},
-	                                Ptr{Int32}))
+	const addstring_c = cfunction(addstring, 
+	                              Void, 
+	                              (Ptr{Void}, 
+	                               Ptr{Int32},
+	                               Ptr{Int32},
+	                               Ptr{Int32},
+	                               Ptr{Int32}))
 
 # not used as reading the string in is
 	# function parsefile(filename::String)
@@ -136,7 +137,7 @@ module uJSON
 	#     result = ccall( (:process_file, ujsonlib), 
 	#                     Int32, 
 	#                     (Ptr{Uint8}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Any), 
-	#                     pointer(filename), startnew_c, exit_ob_c, add_null_bool_int_c, add_double_c, add_string_c, uo)
+	#                     pointer(filename), startnew_c, exit_ob_c, addnbi_c, add_double_c, add_string_c, uo)
 	#     # the first (and only) item in the base array is the actual data structure
 	#     if result != 1
 	#         error("error processing JSON")
@@ -157,7 +158,7 @@ module uJSON
 	    result = ccall( (:process_string, ujsonlib), 
 	                    Int32, 
 	                    (Ptr{Uint8}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Any), 
-	                    utf8(str), startnew_c, exit_ob_c, add_null_bool_int_c, add_double_c, add_string_c, uo)
+	                    utf8(str), startnew_c, exitob_c, addnbi_c, adddouble_c, addstring_c, uo)
 	    # the first (and only) item in the base array is the actual data structure
 	    if result != 1
 	        error("error processing JSON")
