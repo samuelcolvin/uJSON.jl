@@ -2,22 +2,24 @@ module uJSON
 	export parse
 
 	const ujsonlib = find_library(["ujsonlib"],[Pkg.dir("uJSON", "deps")])
+	const TYPES = Any # Union(Dict, Array, String, Number, Bool, Nothing) # Types it may encounter
+	const KEY_TYPES = Union(String) # Types it may encounter as object keys
 
 	type UltraObject
 	    # array to put JSON data in
-	    array::Array{Any, 1}
+	    array::Array{TYPES, 1}
 	    # array to hold keys in
-	    route::Array{Any, 1}
+	    route::Array{TYPES, 1}
 	    # whether we are in a dict (as opposed to an array)
 	    in_dict::Bool
 	    # working object used as a reference to where we're putting data now
-	    working_obj::Any
-	    UltraObject() = new(Any[], Any[], false, nothing)
+	    working_obj::TYPES
+	    UltraObject() = new(TYPES[], TYPES[], false, nothing)
 	end
 
 	function set_last!{T}(uo::UltraObject, value::T, key::String)
 	    if uo.in_dict
-	        uo.working_obj[key] = value
+	        setindex!(uo.working_obj, value, key)
 	    else
 	        push!(uo.working_obj, value)
 	    end
@@ -41,7 +43,7 @@ module uJSON
 	    uo, key = get_key(uobj_, key_, key_length_)
 
 	    is_dict = bool(unsafe_load(is_dict_))
-	    new_item = is_dict ? Dict{String, Any}() : Any[]
+	    new_item = is_dict ? Dict{KEY_TYPES, TYPES}() : TYPES[]
 	    
 	    if uo.working_obj == nothing
 	        uo.working_obj = uo.array
@@ -68,10 +70,10 @@ module uJSON
 	
 	# null, bool, int             
 	function addnbi(uobj_::Ptr{Void}, 
-	                           key_::Ptr{Int32},
-	                           key_length_::Ptr{Int32},
-	                           value_::Ptr{Int64},
-	                           value_type_::Ptr{Int32})
+	                key_::Ptr{Int32},
+	                key_length_::Ptr{Int32},
+	                value_::Ptr{Int64},
+	                value_type_::Ptr{Int32})
 	    uo, key = get_key(uobj_, key_, key_length_)
 	    
 	    value_type = unsafe_load(value_type_)

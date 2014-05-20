@@ -26,24 +26,30 @@ end
 
 function generate_jagged(l1, l2)
 	data = Any[]
-	no_strings = true
+	arrays_only = false
 	randrand(maxlen) = rand(int(rand()*maxlen))
 	for r in rand(int(l1))
 	    if r < 0.25
-	        # push!(data, string(randrand(l2)))
-	        push!(data, {string(i)=>int(i*10) for i = randrand(l2)})
+	    	if arrays_only
+	        	push!(data, string(randrand(l2)))
+	        else
+	        	push!(data, {string(i)=>int(i*10) for i = randrand(l2)})
+	    	end
 	    elseif r < 0.5
 	        push!(data, randrand(l2))
 	    elseif r < 0.75
 	        push!(data, int(10*randrand(l2)))
 	    else
-	        # push!(data, [nothing for i = randrand(l2)])
-	        push!(data, {string(int(i))=>nothing for i = 10*randrand(l2)})
+	    	if arrays_only
+	        	push!(data, [nothing for i = randrand(l2)])
+	    	else
+	        	push!(data, {string(int(i))=>nothing for i = 10*randrand(l2)})
+	        end
 	    end
 	end
 	data
 end
-data = generate_jagged(1e4, 200)
+data = generate_jagged(1e4, 500)
 json_str = json(data)
 fn = "testing.json"
 f=open(fn, "w")
