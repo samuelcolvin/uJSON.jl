@@ -1,9 +1,9 @@
 module uJSON
-	export parse
+    using LegacyStrings
 
-	const ujsonlib = find_library(["ujsonlib"],[Pkg.dir("uJSON", "deps")])
+	const ujsonlib = Libdl.find_library(["ujsonlib"],[Pkg.dir("uJSON", "deps")])
 	const TYPES = Any # Union(Dict, Array, String, Number, Bool, Nothing) # Types it may encounter
-	const KEY_TYPES = Union(String) # Types it may encounter as object keys
+	const KEY_TYPES = Union{UTF32String} # Types it may encounter as object keys
 
 	type UltraObject
 	    # array to put JSON data in
@@ -17,7 +17,7 @@ module uJSON
 	    UltraObject() = new(TYPES[], TYPES[], false, nothing)
 	end
 
-	function set_last!{T}(uo::UltraObject, value::T, key::String)
+	function set_last!{T}(uo::UltraObject, value::T, key::AbstractString)
 	    if uo.in_dict
 	        setindex!(uo.working_obj, value, key)
 	    else
@@ -26,13 +26,13 @@ module uJSON
 	end
 
 	function get_string(key_::Ptr{Int32}, key_length_::Ptr{Int32})
-	    UTF32String(pointer_to_array(key_, unsafe_load(key_length_), false))
+        utf32(key_, unsafe_load(key_length_))
 	end
 
 	function get_key(uobj_::Ptr{Void}, key_::Ptr{Int32}, key_length_::Ptr{Int32})
 	    uo = unsafe_pointer_to_objref(uobj_)::UltraObject
 	    # seems to be slightly quicker if we don't call get_string
-		key = uo.in_dict ?  UTF32String(pointer_to_array(key_, unsafe_load(key_length_), false)): ""
+        key = uo.in_dict ?  utf32(key_, unsafe_load(key_length_)): ""
 		return uo, key
 	end
 	        
@@ -42,7 +42,7 @@ module uJSON
 	                  is_dict_::Ptr{Int32})
 	    uo, key = get_key(uobj_, key_, key_length_)
 
-	    is_dict = bool(unsafe_load(is_dict_))
+	    is_dict = Bool(unsafe_load(is_dict_))
 	    new_item = is_dict ? Dict{KEY_TYPES, TYPES}() : TYPES[]
 	    
 	    if uo.working_obj == nothing
@@ -68,7 +68,7 @@ module uJSON
 	end
 	const exitob_c = cfunction(exitob, Void, (Ptr{Void},))
 	
-	# null, bool, int             
+	# null, Bool, int             
 	function addnbi(uobj_::Ptr{Void}, 
 	                key_::Ptr{Int32},
 	                key_length_::Ptr{Int32},
@@ -80,7 +80,7 @@ module uJSON
 	    if value_type == -1
 	        value = nothing
 	    elseif value_type == 0
-	        value = bool(unsafe_load(value_))
+	        value = Bool(unsafe_load(value_))
 	    elseif value_type == 1
 	        value = unsafe_load(value_)
 	    else
@@ -134,7 +134,7 @@ module uJSON
 
 	#     result = ccall( (:process_file, ujsonlib), 
 	#                     Int32, 
-	#                     (Ptr{Uint8}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Any), 
+	#                     (Ptr{UInt8}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Any), 
 	#                     pointer(filename), startnew_c, exit_ob_c, addnbi_c, add_double_c, add_string_c, uo)
 	#     # the first (and only) item in the base array is the actual data structure
 	#     if result != 1
@@ -146,8 +146,12 @@ module uJSON
 	#     return uo.array[1]
 	# end
 
+    function parsefile(filename::String)
+        parse(readstring(filename))
+    end
+
 	function parse(io::IO)
-		str = readall(io)
+		str = read(io, String)
 		return parse(str)
 	end
 
@@ -155,8 +159,8 @@ module uJSON
 	    uo = UltraObject()
 	    result = ccall( (:process_string, ujsonlib), 
 	                    Int32, 
-	                    (Ptr{Uint8}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Any), 
-	                    utf8(str), startnew_c, exitob_c, addnbi_c, adddouble_c, addstring_c, uo)
+	                    (Ptr{UInt8}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Any), 
+	                    str, startnew_c, exitob_c, addnbi_c, adddouble_c, addstring_c, uo)
 	    # the first (and only) item in the base array is the actual data structure
 	    if result != 1
 	        error("error processing JSON")
