@@ -151,7 +151,7 @@ module uJSON
     end
 
 	function parse(io::IO)
-		str = readall(io)
+		str = read(io, String)
 		return parse(str)
 	end
 
