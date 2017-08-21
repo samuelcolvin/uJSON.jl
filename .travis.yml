@@ -1,15 +1,19 @@
-language: cpp
-compiler:
-  - clang
+# Documentation: http://docs.travis-ci.com/user/languages/julia/
+language: julia
+os:
+  - linux
+  - osx
+julia:
+  - 0.6
+  - nightly
+matrix:
+    allow_failures:
+        - julia: nightly
 notifications:
   email: false
-env:
-  matrix:
-    - JULIAVERSION="julianightlies"
-before_install:
-  - sudo add-apt-repository ppa:staticfloat/julia-deps -y
-  - sudo add-apt-repository ppa:staticfloat/${JULIAVERSION} -y
-  - sudo apt-get update -qq -y
-  - sudo apt-get install libpcre3-dev julia -y
-script:
-  - julia -e 'Pkg.init(); Pkg.clone(pwd()); Pkg.resolve(); Pkg.add("BinDeps"); Pkg.add("JSON"); Pkg.build("uJSON"); Pkg.test("uJSON")'
+git:
+    depth: 99999999
+after_success:
+  - julia -e 'cd(Pkg.dir("uJSON")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
+  - julia -e 'cd(Pkg.dir("uJSON")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
+
